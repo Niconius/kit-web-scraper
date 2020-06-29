@@ -41,7 +41,7 @@ for doc_snapshot in doc_snapshots:
         game_mode_stats[f"{game_mode_row}_mmr"] = int(mmr.replace("\n", "").replace(",", ""))
     page = requests.get(f'http://steamcommunity.com/profiles/{doc_snapshot.get("steam_id")}')
     soup = BeautifulSoup(page.content, 'html.parser')
-    steam_picture_url = soup.findAll("div", {"class": "playerAvatarAutoSizeInner"})[0].findChildren("img")[0]["src"]
+    steam_picture_url = soup.findAll("div", {"class": "playerAvatarAutoSizeInner"})[0].findChildren("img", recursive=False)[0]["src"]
     
     doc.update({
         "steam_picture_url": steam_picture_url,
