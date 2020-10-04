@@ -1,46 +1,58 @@
+#!/usr/bin/env python3
+
 import requests
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from bs4 import BeautifulSoup
 import json
-
+import os
+import sys
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
 
-game_mode_rows = {
-    "duel": 1,
-    "doubles": 2,
-    "solo_standard": 3,
-    "standard": 4
-}
 
-# Use the application default credentials
-# cred = credentials.ApplicationDefault()
-# firebase_admin.initialize_app(cred, {
-#   'projectId': "kitsc-rl-tracker",
-# })
-
-# Use a service account
 if not firebase_admin._apps:
     # TODO: Use somesort of dynamic sdk / certificate so that others can use the script / project
-    cred = credentials.Certificate('kitsc-rl-tracker-firebase-adminsdk-7n65m-b894f2fb88.json')
+    dirname = os.path.dirname(__file__)
+    credfile = os.path.join(dirname, 'kitsc-rl-tracker-firebase-adminsdk-7n65m-b894f2fb88.json')
+    cred = credentials.Certificate(credfile)
     firebase_admin.initialize_app(cred)
+
+chrome_options = Options()
+chrome_options.add_argument("--disable-extensions")
+chrome_options.add_argument("--disable-gpu")
+chrome_options.add_argument("--no-sandbox")
+chrome_options.add_argument("--headless")
+
+driver = webdriver.Chrome(
+    executable_path=sys.argv[1],
+    options=chrome_options
+)
 
 db = firestore.client()
 
 doc_snapshots = db.collection(u'Players').stream()
 
+game_mode_rows = {
+    "duel": 1,
+    "doubles": 2,
+    "standard": 4
+}
+
 for doc_snapshot in doc_snapshots:
     doc = db.collection(u'Players').document(doc_snapshot.id)
-    page = requests.get(f'https://rocketleague.tracker.network/profile/steam/{doc_snapshot.get("steam_id")}')
-    soup = BeautifulSoup(page.content, 'html.parser')
+    steam_id = doc_snapshot.get("steam_id")
+    driver.get(f'https://rocketleague.tracker.network/rocket-league/profile/steam/{steam_id}/overview')
+    soup = BeautifulSoup(driver.page_source, 'html.parser')
+    all_mmr = soup.find_all("div", class_="mmr")
+    all_rank = soup.find_all("td", class_="icon-container")
     game_mode_stats = {}
     for game_mode_row in game_mode_rows:
-        mmr = soup.findAll("div", {"class": "season-table"})[0].findChildren("table")[1].findChildren("tbody")[0].findChildren("tr")[game_mode_rows[game_mode_row]].findChildren("td")[3].contents[0]
-        rank = soup.findAll("div", {"class": "season-table"})[0].findChildren("table")[1].findChildren("tbody")[0].findChildren("tr")[game_mode_rows[game_mode_row]].findChildren("td")[0].findChildren("img")[0]["src"]
-        game_mode_stats[f"{game_mode_row}_rank"] = f"https://rocketleague.tracker.network/{rank}"
-        game_mode_stats[f"{game_mode_row}_mmr"] = int(mmr.replace("\n", "").replace(",", ""))
-    page = requests.get(f'http://steamcommunity.com/profiles/{doc_snapshot.get("steam_id")}')
-    soup = BeautifulSoup(page.content, 'html.parser')
+        game_mode_stats[f"{game_mode_row}_rank"] = all_rank[game_mode_rows[game_mode_row]].find_all("img")[0]["src"]
+        game_mode_stats[f"{game_mode_row}_mmr"] = int(all_mmr[game_mode_rows[game_mode_row]].text.replace(",", ""))
+    page = requests.get(f'http://steamcommunity.com/profiles/{steam_id}')
+    soup = BeautifulSoup(page.content, 'html.parser', from_encoding="iso-8859-1")
     steam_picture_url = soup.findAll("div", {"class": "playerAvatarAutoSizeInner"})[0].findChildren("img", recursive=False)[0]["src"]
     
     doc.update({
@@ -50,7 +62,5 @@ for doc_snapshot in doc_snapshots:
         "doubles_rank": game_mode_stats["doubles_rank"],
         "doubles_mmr": game_mode_stats["doubles_mmr"],
         "standard_rank": game_mode_stats["standard_rank"],
-        "standard_mmr": game_mode_stats["standard_mmr"],
-        "solo_standard_rank": game_mode_stats["solo_standard_rank"],
-        "solo_standard_mmr": game_mode_stats["solo_standard_mmr"],
+        "standard_mmr": game_mode_stats["standard_mmr"]
     })
