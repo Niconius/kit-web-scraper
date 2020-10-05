@@ -64,3 +64,5 @@ for doc_snapshot in doc_snapshots:
         "standard_rank": game_mode_stats["standard_rank"],
         "standard_mmr": game_mode_stats["standard_mmr"]
     })
+
+driver.close()
