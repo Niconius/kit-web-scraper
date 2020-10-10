@@ -49,7 +49,7 @@ for doc_snapshot in doc_snapshots:
     all_rank = soup.find_all("td", class_="icon-container")
     game_mode_stats = {}
     for game_mode_row in game_mode_rows:
-        if steam_id == "76561198055015335" and game_mode_row == "standard":
+        if (steam_id == "76561198055015335" or steam_id == "76561198274443758") and game_mode_row == "standard":
             game_mode_stats[f"{game_mode_row}_rank"] = all_rank[3].find_all("img")[0]["src"]
             game_mode_stats[f"{game_mode_row}_mmr"] = int(all_mmr[3].text.replace(",", ""))
             continue
