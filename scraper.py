@@ -32,7 +32,7 @@ driver = webdriver.Chrome(
 
 db = firestore.client()
 
-doc_snapshots = db.collection(u'Players').stream()
+player_docs = [snapshot for snapshot in db.collection(u'Players').stream()]
 
 game_mode_rows = {
     "duel": 1,
@@ -40,7 +40,7 @@ game_mode_rows = {
     "standard": 4
 }
 
-for doc_snapshot in doc_snapshots:
+for doc_snapshot in player_docs:
     doc = db.collection(u'Players').document(doc_snapshot.id)
     steam_id = doc_snapshot.get("steam_id")
     driver.get(f'https://rocketleague.tracker.network/rocket-league/profile/steam/{steam_id}/overview')
