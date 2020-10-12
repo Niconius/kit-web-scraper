@@ -37,7 +37,7 @@ player_docs = [snapshot for snapshot in db.collection(u'Players').stream()]
 game_mode_rows = {
     "duel": 1,
     "doubles": 2,
-    "standard": 4
+    "standard": 3
 }
 
 for doc_snapshot in player_docs:
@@ -49,10 +49,6 @@ for doc_snapshot in player_docs:
     all_rank = soup.find_all("td", class_="icon-container")
     game_mode_stats = {}
     for game_mode_row in game_mode_rows:
-        if (steam_id == "76561198055015335" or steam_id == "76561198274443758") and game_mode_row == "standard":
-            game_mode_stats[f"{game_mode_row}_rank"] = all_rank[3].find_all("img")[0]["src"]
-            game_mode_stats[f"{game_mode_row}_mmr"] = int(all_mmr[3].text.replace(",", ""))
-            continue
         game_mode_stats[f"{game_mode_row}_rank"] = all_rank[game_mode_rows[game_mode_row]].find_all("img")[0]["src"]
         game_mode_stats[f"{game_mode_row}_mmr"] = int(all_mmr[game_mode_rows[game_mode_row]].text.replace(",", ""))
     page = requests.get(f'http://steamcommunity.com/profiles/{steam_id}')
