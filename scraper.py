@@ -31,39 +31,40 @@ driver = webdriver.Chrome(
     options=chrome_options
 )
 
-db = firestore.client()
+try:
+    db = firestore.client()
 
-player_docs = [snapshot for snapshot in db.collection(u'Players').stream()]
+    player_docs = [snapshot for snapshot in db.collection(u'Players').stream()]
 
-game_mode_rows = {
-    "duel": 1,
-    "doubles": 2,
-    "standard": 3
-}
+    game_mode_rows = {
+        "duel": 1,
+        "doubles": 2,
+        "standard": 3
+    }
 
-for doc_snapshot in player_docs:
-    doc = db.collection(u'Players').document(doc_snapshot.id)
-    steam_id = doc_snapshot.get("steam_id")
-    driver.get(f'https://rocketleague.tracker.network/rocket-league/profile/steam/{steam_id}/overview')
-    soup = BeautifulSoup(driver.page_source, 'html.parser')
-    all_mmr = soup.find_all("div", class_="mmr")
-    all_rank = soup.find_all("td", class_="icon-container")
-    game_mode_stats = {}
-    for game_mode_row in game_mode_rows:
-        game_mode_stats[f"{game_mode_row}_rank"] = all_rank[game_mode_rows[game_mode_row]].find_all("img")[0]["src"]
-        game_mode_stats[f"{game_mode_row}_mmr"] = int(all_mmr[game_mode_rows[game_mode_row]].text.replace(",", ""))
-    page = requests.get(f'http://steamcommunity.com/profiles/{steam_id}')
-    soup = BeautifulSoup(page.content, 'html.parser', from_encoding="iso-8859-1")
-    steam_picture_url = soup.findAll("div", {"class": "playerAvatarAutoSizeInner"})[0].findChildren("img", recursive=False)[0]["src"]
-    
-    doc.update({
-        "steam_picture_url": steam_picture_url,
-        "duel_rank": game_mode_stats["duel_rank"],
-        "duel_mmr": game_mode_stats["duel_mmr"],
-        "doubles_rank": game_mode_stats["doubles_rank"],
-        "doubles_mmr": game_mode_stats["doubles_mmr"],
-        "standard_rank": game_mode_stats["standard_rank"],
-        "standard_mmr": game_mode_stats["standard_mmr"]
-    })
-
-driver.quit()
+    for doc_snapshot in player_docs:
+        doc = db.collection(u'Players').document(doc_snapshot.id)
+        steam_id = doc_snapshot.get("steam_id")
+        driver.get(f'https://rocketleague.tracker.network/rocket-league/profile/steam/{steam_id}/overview')
+        soup = BeautifulSoup(driver.page_source, 'html.parser')
+        all_mmr = soup.find_all("div", class_="mmr")
+        all_rank = soup.find_all("td", class_="icon-container")
+        game_mode_stats = {}
+        for game_mode_row in game_mode_rows:
+            game_mode_stats[f"{game_mode_row}_rank"] = all_rank[game_mode_rows[game_mode_row]].find_all("img")[0]["src"]
+            game_mode_stats[f"{game_mode_row}_mmr"] = int(all_mmr[game_mode_rows[game_mode_row]].text.replace(",", ""))
+        page = requests.get(f'http://steamcommunity.com/profiles/{steam_id}')
+        soup = BeautifulSoup(page.content, 'html.parser', from_encoding="iso-8859-1")
+        steam_picture_url = soup.findAll("div", {"class": "playerAvatarAutoSizeInner"})[0].findChildren("img", recursive=False)[0]["src"]
+        
+        doc.update({
+            "steam_picture_url": steam_picture_url,
+            "duel_rank": game_mode_stats["duel_rank"],
+            "duel_mmr": game_mode_stats["duel_mmr"],
+            "doubles_rank": game_mode_stats["doubles_rank"],
+            "doubles_mmr": game_mode_stats["doubles_mmr"],
+            "standard_rank": game_mode_stats["standard_rank"],
+            "standard_mmr": game_mode_stats["standard_mmr"]
+        })
+finally:
+    driver.quit()
