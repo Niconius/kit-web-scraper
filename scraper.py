@@ -19,6 +19,12 @@ if not firebase_admin._apps:
     cred = credentials.Certificate(credfile)
     firebase_admin.initialize_app(cred)
 
+try:
+    os.system('killall chrome')
+except Exception:
+    pass
+
+
 chrome_options = Options()
 chrome_options.add_argument("--disable-extensions")
 chrome_options.add_argument("--disable-gpu")
@@ -30,6 +36,11 @@ driver = webdriver.Chrome(
     executable_path=sys.argv[1],
     options=chrome_options
 )
+
+# On the server
+# driver = webdriver.Chrome(
+#     options=chrome_options
+# )
 
 try:
     db = firestore.client()
@@ -67,4 +78,5 @@ try:
             "standard_mmr": game_mode_stats["standard_mmr"]
         })
 finally:
+    driver.close()
     driver.quit()
